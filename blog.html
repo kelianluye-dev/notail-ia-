@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - NotAIL</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Animation de transition entre les pages */
+        .page-transition {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+        }
+
+        .page-transition.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000000;
+            color: #f0f0f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #webgl-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        nav, .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px 0;
+            background: transparent;
+            position: fixed;
+            top: 20px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            z-index: 1000;
+            transition: none;
+        }
+
+        nav.scrolled {
+            writing-mode: horizontal-tb;
+            top: 20px;
+            right: 30px;
+            left: auto;
+            width: auto;
+            transform: none;
+            justify-content: flex-end;
+        }
+
+        nav.scrolled .nav-links {
+            display: none;
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            cursor: pointer;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        nav.scrolled .hamburger {
+            display: flex;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .hamburger:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .hamburger:hover span {
+            background: white;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 25px;
+            list-style: none;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            padding: 8px 35px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: none;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            transition: all 0.3s;
+            font-weight: 500;
+            padding: 8px 18px;
+            border-radius: 50px;
+            background: transparent;
+        }
+
+        .nav-links a:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Contenu */
+        .content {
+            padding: 150px 80px 80px 80px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .blog-header {
+            margin-bottom: 60px;
+        }
+
+        .blog-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #b19eef;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .blog-header h1 {
+            font-size: 72px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            line-height: 1.1;
+            background: linear-gradient(to right, #f0f0f0, #b19eef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .blog-header .subtitle {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            max-width: 800px;
+        }
+
+        /* Featured Article Card */
+        .featured-article {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            margin-bottom: 60px;
+            transition: transform 0.3s ease;
+        }
+
+        .featured-article:hover {
+            transform: translateY(-5px);
+        }
+
+        .featured-article-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(177, 158, 239, 0.3) 100%);
+            background-image: url('https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1400&h=900&fit=crop&q=90');
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .featured-article:hover .featured-article-image {
+            transform: scale(1.08);
+        }
+
+        .featured-article-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(177, 158, 239, 0.15) 0%, rgba(102, 126, 234, 0.25) 100%);
+            z-index: 1;
+        }
+
+        .featured-article-image::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 50%, rgba(177, 158, 239, 0.2) 0%, transparent 50%);
+            z-index: 1;
+        }
+
+        .featured-article-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 65%;
+            background: linear-gradient(to top, rgba(10, 10, 10, 0.98) 0%, rgba(10, 10, 10, 0.92) 30%, rgba(10, 10, 10, 0.75) 60%, rgba(10, 10, 10, 0.4) 85%, transparent 100%);
+            padding: 60px 50px 40px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            z-index: 2;
+        }
+
+        .featured-article-expand {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 44px;
+            height: 44px;
+            background: rgba(177, 158, 239, 0.15);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(177, 158, 239, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .featured-article:hover .featured-article-expand {
+            background: rgba(177, 158, 239, 0.25);
+            border-color: rgba(177, 158, 239, 0.5);
+            transform: scale(1.1) rotate(45deg);
+        }
+
+        .featured-article-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            max-width: 90%;
+        }
+
+        .featured-article-description {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 30px;
+            line-height: 1.6;
+            max-width: 85%;
+        }
+
+        .featured-article-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .featured-article-author-info {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .featured-article-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .featured-article-meta-label {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .featured-article-author {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .featured-article-author-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #b19eef 0%, #667eea 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .featured-article-author-name {
+            color: white;
+            font-weight: 500;
+        }
+
+        .featured-article-date {
+            color: white;
+        }
+
+        .featured-article-categories {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .featured-article-category-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 4px;
+        }
+
+        .featured-article-category-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .featured-article-category-tag {
+            background: rgba(177, 158, 239, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #f0f0f0;
+            font-weight: 500;
+            border: 1px solid rgba(177, 158, 239, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .featured-article-category-tag:hover {
+            background: rgba(177, 158, 239, 0.3);
+            border-color: rgba(177, 158, 239, 0.5);
+        }
+
+        /* Articles Grid */
+        .articles-section {
+            margin-top: 80px;
+        }
+
+        .articles-section-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: #f0f0f0;
+            margin-bottom: 40px;
+            background: linear-gradient(to right, #f0f0f0, #b19eef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .article-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+        }
+
+        .article-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(177, 158, 239, 0.4);
+            box-shadow: 0 10px 40px rgba(177, 158, 239, 0.2);
+        }
+
+        .article-card-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(177, 158, 239, 0.3) 100%);
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .article-card-image::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent 0%, rgba(10, 10, 10, 0.3) 100%);
+        }
+
+        .article-card-content {
+            padding: 24px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .article-card-category {
+            display: inline-block;
+            background: rgba(177, 158, 239, 0.2);
+            color: #b19eef;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(177, 158, 239, 0.3);
+            width: fit-content;
+        }
+
+        .article-card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f0f0f0;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .article-card-description {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.7;
+            margin-bottom: 20px;
+            flex-grow: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .article-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .article-card-author {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .article-card-author-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #b19eef 0%, #667eea 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .article-card-date {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .article-card-read-more {
+            color: #b19eef;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            margin-top: 12px;
+        }
+
+        .article-card-read-more:hover {
+            color: #c4b5fd;
+            gap: 10px;
+        }
+
+        .article-card-read-more i {
+            transition: transform 0.3s ease;
+        }
+
+        .article-card-read-more:hover i {
+            transform: translateX(4px);
+        }
+
+        /* Modal */
+        .article-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            overflow-y: auto;
+            opacity: 0;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .article-modal.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .article-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 10001;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .article-modal-content {
+            position: relative;
+            max-width: 1000px;
+            width: 92%;
+            margin: 60px auto 40px auto;
+            background: linear-gradient(145deg, rgba(15, 15, 15, 0.98) 0%, rgba(20, 20, 20, 0.95) 100%);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(177, 158, 239, 0.2);
+            border-radius: 24px;
+            padding: 0;
+            z-index: 10002;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.8),
+                0 0 0 1px rgba(177, 158, 239, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+
+        .article-modal.active .article-modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .article-modal-header {
+            position: relative;
+            height: 450px;
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+        }
+
+        .article-modal-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                135deg,
+                rgba(177, 158, 239, 0.15) 0%,
+                rgba(102, 126, 234, 0.1) 50%,
+                transparent 100%
+            );
+            z-index: 1;
+        }
+
+        .article-modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60%;
+            background: linear-gradient(
+                to top,
+                rgba(10, 10, 10, 1) 0%,
+                rgba(10, 10, 10, 0.95) 40%,
+                rgba(10, 10, 10, 0.7) 70%,
+                transparent 100%
+            );
+            z-index: 2;
+        }
+
+        .article-modal-close {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 48px;
+            height: 48px;
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .article-modal-close:hover {
+            background: rgba(177, 158, 239, 0.2);
+            border-color: rgba(177, 158, 239, 0.4);
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 4px 12px rgba(177, 158, 239, 0.3);
+        }
+
+        .article-modal-body {
+            padding: 0;
+            background: rgba(10, 10, 10, 0.98);
+        }
+
+        .article-modal-header-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 50px 50px 40px 50px;
+            z-index: 3;
+            animation: slideUp 0.5s ease 0.1s both;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .article-modal-category {
+            display: inline-block;
+            background: rgba(177, 158, 239, 0.25);
+            color: #c4b5fd;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(177, 158, 239, 0.3);
+            box-shadow: 0 2px 8px rgba(177, 158, 239, 0.2);
+        }
+
+        .article-modal-title {
+            font-size: 42px;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 24px;
+            line-height: 1.2;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to right, #ffffff, #e9d5ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .article-modal-meta {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .article-modal-author {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .article-modal-author-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #b19eef 0%, #667eea 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(177, 158, 239, 0.4);
+        }
+
+        .article-modal-author-name {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .article-modal-date {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .article-modal-text-container {
+            padding: 50px;
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .article-modal-text {
+            font-size: 17px;
+            line-height: 1.9;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 0;
+            max-width: 850px;
+            display: block; /* Assurer l'affichage */
+        }
+
+        .article-modal-text p {
+            margin-bottom: 24px;
+            font-weight: 400;
+            display: block; /* Assurer l'affichage */
+        }
+
+        .article-modal-text p:first-child {
+            font-size: 19px;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 32px;
+            font-weight: 500;
+        }
+
+        .article-modal-text h3 {
+            font-size: 28px;
+            font-weight: 800;
+            color: #f0f0f0;
+            margin-top: 48px;
+            margin-bottom: 20px;
+            line-height: 1.3;
+            background: linear-gradient(to right, #f0f0f0, #b19eef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(177, 158, 239, 0.2);
+        }
+
+        .article-modal-text h3:first-of-type {
+            margin-top: 0;
+        }
+
+        .article-modal-text ul {
+            margin-left: 24px;
+            margin-bottom: 24px;
+            margin-top: 12px;
+        }
+
+        .article-modal-text li {
+            margin-bottom: 12px;
+            color: rgba(255, 255, 255, 0.75);
+            line-height: 1.8;
+            padding-left: 8px;
+        }
+
+        .article-modal-text li::marker {
+            color: #b19eef;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .featured-article-title {
+                font-size: 40px;
+            }
+
+            .featured-article-description {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .articles-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 24px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 120px 30px 50px 30px;
+            }
+
+            .blog-header h1 {
+                font-size: 48px;
+                background: linear-gradient(to right, #f0f0f0, #b19eef);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            .blog-header .subtitle {
+                font-size: 18px;
+            }
+
+            .featured-article {
+                height: 500px;
+            }
+
+            .featured-article-overlay {
+                padding: 40px 30px 30px 30px;
+                height: 70%;
+            }
+
+            .featured-article-title {
+                font-size: 32px;
+                max-width: 100%;
+            }
+
+            .featured-article-description {
+                font-size: 15px;
+                max-width: 100%;
+            }
+
+            .featured-article-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .featured-article-categories {
+                align-items: flex-start;
+                width: 100%;
+            }
+
+            .featured-article-expand {
+                top: 20px;
+                right: 20px;
+                width: 36px;
+                height: 36px;
+            }
+
+            .articles-section {
+                margin-top: 60px;
+            }
+
+            .articles-section-title {
+                font-size: 28px;
+                margin-bottom: 30px;
+            }
+
+            .articles-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .article-modal-content {
+                width: 95%;
+                margin: 40px auto 20px auto;
+            }
+
+            .article-modal-header {
+                height: 280px;
+            }
+
+            .article-modal-header-content {
+                padding: 30px 30px 30px 30px;
+            }
+
+            .article-modal-title {
+                font-size: 32px;
+            }
+
+            .article-modal-text-container {
+                padding: 40px 30px;
+            }
+
+            .article-modal-text {
+                font-size: 16px;
+            }
+
+            .article-modal-text p:first-child {
+                font-size: 18px;
+            }
+
+            .article-modal-text h3 {
+                font-size: 24px;
+                margin-top: 36px;
+            }
+
+            .article-modal-close {
+                top: 16px;
+                right: 16px;
+                width: 42px;
+                height: 42px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .blog-header h1 {
+                font-size: 36px;
+                background: linear-gradient(to right, #f0f0f0, #b19eef);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            .featured-article {
+                height: 450px;
+            }
+
+            .featured-article-title {
+                font-size: 28px;
+            }
+
+            .featured-article-overlay {
+                padding: 30px 20px 20px 20px;
+            }
+
+            .article-modal-header {
+                height: 240px;
+            }
+
+            .article-modal-header-content {
+                padding: 24px 20px;
+            }
+
+            .article-modal-title {
+                font-size: 26px;
+            }
+
+            .article-modal-text-container {
+                padding: 30px 20px;
+            }
+
+            .article-modal-text {
+                font-size: 15px;
+                line-height: 1.8;
+            }
+
+            .article-modal-text p:first-child {
+                font-size: 17px;
+            }
+
+            .article-modal-text h3 {
+                font-size: 22px;
+                margin-top: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="webgl-background"></canvas>
+
+    <nav id="navbar">
+        <ul class="nav-links">
+            <li><a href="notail.html">Accueil</a></li>
+            <li><a href="decouvrir.html">Découvrir</a></li>
+            <li><a href="ia-assistant.html">IA Assistant</a></li>
+            <li><a href="blog.html">Blog</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div class="blog-header">
+            <span class="blog-label">Notre blog</span>
+            <h1>Ressources et informations</h1>
+            <p class="subtitle">Les dernières actualités, interviews, technologies et ressources du secteur.</p>
+        </div>
+
+        <!-- Featured Article -->
+        <div class="featured-article">
+            <div class="featured-article-image"></div>
+            <div class="featured-article-expand">
+                <i class="fas fa-external-link-alt"></i>
+            </div>
+            <div class="featured-article-overlay">
+                <h2 class="featured-article-title">NotAIL : Révolutionnez votre façon de prendre des notes avec l'IA</h2>
+                <p class="featured-article-description">Découvrez comment l'intelligence artificielle transforme la prise de notes et l'apprentissage. Les outils évoluent, mais la qualité de vos notes reste essentielle. Apprenez à maximiser votre productivité avec NotAIL.</p>
+                <div class="featured-article-meta">
+                    <div class="featured-article-author-info">
+                        <div class="featured-article-meta-row">
+                            <span class="featured-article-meta-label">Publié par</span>
+                            <div class="featured-article-author">
+                                <div class="featured-article-author-avatar">KL</div>
+                                <span class="featured-article-author-name">Kelian Luye</span>
+                            </div>
+                        </div>
+                        <div class="featured-article-meta-row">
+                            <span class="featured-article-meta-label">Publié le</span>
+                            <span class1="featured-article-date">10 avril 2025</span>
+                        </div>
+                    </div>
+                    <div class="featured-article-categories">
+                        <span class="featured-article-category-label">Classé sous</span>
+                        <div class="featured-article-category-tags">
+                            <span class="featured-article-category-tag">IA</span>
+                            <span class="featured-article-category-tag">Productivité</span>
+                            <span class="featured-article-category-tag">Éducation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Articles Section -->
+        <div class="articles-section">
+            <h2 class="articles-section-title">Articles récents</h2>
+            <div class="articles-grid">
+                <!-- Article 1 -->
+                <div class="article-card">
+                    <div class="article-card-image" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=400&fit=crop&q=80');"></div>
+                    <div class="article-card-content">
+                        <span class="article-card-category">IA</span>
+                        <h3 class="article-card-title">Comment l'IA transforme l'apprentissage moderne</h3>
+                        <p class="article-card-description">L'intelligence artificielle révolutionne complètement notre approche de l'éducation. Découvrez comment les outils IA comme NotAIL personnalisent l'apprentissage, adaptent le contenu à votre rythme, et optimisent la rétention d'information. Explorez les avantages concrets de l'IA dans votre parcours éducatif et comment elle peut transformer votre façon d'apprendre.</p>
+                        <div class="article-card-footer">
+                            <div class="article-card-author">
+                                <div class="article-card-author-avatar">KL</div>
+                                <span>Kelian Luye</span>
+                            </div>
+                            <span class="article-card-date">5 avr. 2025</span>
+                        </div>
+                        <a href="#" class="article-card-read-more" data-article="1">Lire l'article <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+
+                <!-- Article 2 -->
+                <div class="article-card">
+                    <div class="article-card-image" style="background-image: url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=400&fit=crop&q=80');"></div>
+                    <div class="article-card-content">
+                        <span class="article-card-category">Productivité</span>
+                        <h3 class="article-card-title">5 techniques pour prendre des notes efficaces</h3>
+                        <p class="article-card-description">Découvrez cinq méthodes éprouvées pour transformer votre prise de notes : la méthode Cornell, le mind mapping, les notes visuelles, la technique de réduction progressive et les notes actives. Chaque technique est expliquée en détail avec des exemples concrets pour vous aider à choisir celle qui correspond le mieux à votre style d'apprentissage et à améliorer significativement votre productivité.</p>
+                        <div class="article-card-footer">
+                            <div class="article-card-author">
+                                <div class="article-card-author-avatar">KL</div>
+                                <span>Kelian Luye</span>
+                            </div>
+                            <span class="article-card-date">28 mars 2025</span>
+                        </div>
+                        <a href="#" class="article-card-read-more" data-article="2">Lire l'article <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+
+                <!-- Article 3 -->
+                <div class="article-card">
+                    <div class="article-card-image" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop&q=80');"></div>
+                    <div class="article-card-content">
+                        <span class="article-card-category">Éducation</span>
+                        <h3 class="article-card-title">L'avenir de l'éducation assistée par IA</h3>
+                        <p class="article-card-description">L'éducation évolue grâce à l'intelligence artificielle. Cet article explore les tendances émergentes : apprentissage adaptatif, feedback instantané, personnalisation du contenu, et analyse prédictive des performances. Découvrez comment l'IA crée des expériences d'apprentissage sur mesure, identifie les difficultés avant qu'elles ne deviennent problématiques, et ouvre de nouvelles perspectives pour l'éducation de demain.</p>
+                        <div class="article-card-footer">
+                            <div class="article-card-author">
+                                <div class="article-card-author-avatar">KL</div>
+                                <span>Kelian Luye</span>
+                            </div>
+                            <span class="article-card-date">20 mars 2025</span>
+                        </div>
+                        <a href="#" class="article-card-read-more" data-article="3">Lire l'article <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+
+                <!-- Article 4 -->
+                <div class="article-card">
+                    <div class="article-card-image" style="background-image: url('https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop&q=80');"></div>
+                    <div class="article-card-content">
+                        <span class="article-card-category">Astuces</span>
+                        <h3 class="article-card-title">Organisez vos notes comme un pro</h3>
+                        <p class="article-card-description">Apprenez à structurer vos notes de manière professionnelle avec des systèmes de classement efficaces, l'utilisation de tags et de métadonnées, la création d'index et de tableaux de bord. Découvrez comment organiser vos documents par projets, par dates, ou par thèmes pour retrouver instantanément l'information dont vous avez besoin. Des stratégies pratiques pour maintenir un système organisé sur le long terme.</p>
+                        <div class="article-card-footer">
+                            <div class="article-card-author">
+                                <div class="article-card-author-avatar">KL</div>
+                                <span>Kelian Luye</span>
+                            </div>
+                            <span class="article-card-date">15 mars 2025</span>
+                        </div>
+                        <a href="#" class="article-card-read-more" data-article="4">Lire l'article <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+
+                <!-- Article 5 -->
+                <div class="article-card">
+                    <div class="article-card-image" style="background-image: url('https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=600&h=400&fit=crop&q=80');"></div>
+                    <div class="article-card-content">
+                        <span class="article-card-category">Technologie</span>
+                        <h3 class="article-card-title">Les tendances tech qui changent l'apprentissage</h3>
+                        <p class="article-card-description">Explorez les technologies révolutionnaires qui transforment l'apprentissage : réalité augmentée et virtuelle pour des expériences immersives, blockchain pour la certification, apprentissage automatique pour l'adaptation personnelle, et outils de collaboration en temps réel. Découvrez comment ces innovations créent de nouvelles possibilités d'apprentissage interactif, engageant et efficace pour les étudiants modernes.</p>
+                        <div class="article-card-footer">
+                            <div class="article-card-author">
+                                <div class="article-card-author-avatar">KL</div>
+                                <span>Kelian Luye</span>
+                            </div>
+                            <span class="article-card-date">10 mars 2025</span>
+                        </div>
+                        <a href="#" class="article-card-read-more" data-article="5">Lire l'article <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+
+                <!-- Article 6 -->
+                <div class="article-card">
+                    <div class="article-card-image" style="background-image: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&h=400&fit=crop&q=80');"></div>
+                    <div class="article-card-content">
+                        <span class="article-card-category">Méthodes</span>
+                        <h3 class="article-card-title">Optimisez votre workflow de prise de notes</h3>
+                        <p class="article-card-description">Transformez votre processus de prise de notes en un workflow optimisé et productif. Apprenez à utiliser des raccourcis clavier, des templates personnalisés, l'automatisation avec l'IA, et des systèmes de révision efficaces. Découvrez comment intégrer vos notes dans un processus de travail cohérent, de la capture initiale à la révision finale, pour maximiser votre efficacité et votre compréhension.</p>
+                        <div class="article-card-footer">
+                            <div class="article-card-author">
+                                <div class="article-card-author-avatar">KL</div>
+                                <span>Kelian Luye</span>
+                            </div>
+                            <span class="article-card-date">3 mars 2025</span>
+                        </div>
+                        <a href="#" class="article-card-read-more" data-article="6">Lire l'article <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Article -->
+    <div class="article-modal" id="articleModal">
+        <div class="article-modal-overlay" id="modalOverlay"></div>
+        <div class="article-modal-content">
+            <div class="article-modal-header" id="modalHeader">
+                <div class="article-modal-header-content">
+                    <span class="article-modal-category" id="modalCategory"></span>
+                    <h2 class="article-modal-title" id="modalTitle"></h2>
+                    <div class="article-modal-meta">
+                        <div class="article-modal-author">
+                            <div class="article-modal-author-avatar">KL</div>
+                            <span class="article-modal-author-name">Kelian Luye</span>
+                        </div>
+                        <span class="article-modal-date" id="modalDate"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="article-modal-close" id="modalClose">
+                <i class="fas fa-times"></i>
+            </div>
+            <div class="article-modal-body">
+                <div class="article-modal-text-container">
+                    <div class="article-modal-text" id="modalText"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        // Navigation
+        const navbar = document.getElementById('navbar');
+        const body = document.body;
+
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 100) {
+                navbar.classList.add('scrolled');
+                body.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+                body.classList.remove('scrolled');
+            }
+        });
+
+        // Articles data
+        const articlesData = {
+            1: {
+                image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1400&h=900&fit=crop&q=80',
+                category: 'IA',
+                title: 'Comment l\'IA transforme l\'apprentissage moderne',
+                date: '5 avr. 2025',
+                content: `
+                    <p>L'intelligence artificielle révolutionne complètement notre approche de l'éducation et de l'apprentissage. Dans cet article, nous explorons en profondeur comment les outils IA comme NotAIL transforment la façon dont nous apprenons.</p>
+                    
+                    <h3>Personnalisation de l'apprentissage</h3>
+                    <p>L'IA permet de créer des expériences d'apprentissage sur mesure qui s'adaptent à votre rythme et à votre style d'apprentissage. Les algorithmes analysent vos performances, identifient vos points forts et vos faiblesses, puis ajustent le contenu en conséquence.</p>
+                    
+                    <h3>Optimisation de la rétention</h3>
+                    <p>Grâce à l'analyse des données, l'IA peut déterminer le moment optimal pour réviser chaque concept. Elle utilise des techniques de répétition espacée pour maximiser votre rétention à long terme, rendant votre apprentissage plus efficace.</p>
+                    
+                    <h3>Feedback instantané</h3>
+                    <p>Plus besoin d'attendre la correction d'un professeur. L'IA fournit un feedback immédiat sur vos notes, suggère des améliorations et identifie les erreurs courantes avant qu'elles ne deviennent des habitudes.</p>
+                    
+                    <h3>L'avenir de l'apprentissage</h3>
+                    <p>Avec NotAIL, vous bénéficiez d'un assistant intelligent qui comprend votre contexte, votre niveau et vos objectifs. L'IA ne remplace pas l'humain, mais elle amplifie vos capacités d'apprentissage de manière significative.</p>
+                `
+            },
+            2: {
+                image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1400&h=900&fit=crop&q=80',
+                category: 'Productivité',
+                title: '5 techniques pour prendre des notes efficaces',
+                date: '28 mars 2025',
+                content: `
+                    <p>Prendre des notes efficaces est un art qui peut être maîtrisé. Découvrez cinq méthodes éprouvées qui transformeront votre façon de capturer et de retenir l'information.</p>
+                    
+                    <h3>1. La méthode Cornell</h3>
+                    <p>Divisez votre page en trois sections : notes principales, mots-clés, et résumé. Cette structure vous force à synthétiser l'information et facilite la révision ultérieure.</p>
+                    
+                    <h3>2. Le mind mapping</h3>
+                    <p>Créez des cartes mentales visuelles qui montrent les relations entre les concepts. Idéal pour les apprenants visuels et pour organiser des informations complexes.</p>
+                    
+                    <h3>3. Les notes visuelles</h3>
+                    <p>Utilisez des dessins, des diagrammes et des symboles pour représenter les concepts. Le cerveau retient mieux les images que le texte seul.</p>
+                    
+                    <h3>4. La technique de réduction progressive</h3>
+                    <p>Commencez par des notes détaillées, puis réduisez-les progressivement en ne gardant que l'essentiel. Cette méthode renforce votre compréhension à chaque étape.</p>
+                    
+                    <h3>5. Les notes actives</h3>
+                    <p>Posez-vous des questions, ajoutez vos propres réflexions et créez des liens avec ce que vous savez déjà. Les notes actives transforment la prise de notes en un processus d'apprentissage en soi.</p>
+                `
+            },
+            3: {
+                image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1400&h=900&fit=crop&q=80',
+                category: 'Éducation',
+                title: 'L\'avenir de l\'éducation assistée par IA',
+                date: '20 mars 2025',
+                content: `
+                    <p>L'éducation évolue à une vitesse impressionnante grâce à l'intelligence artificielle. Explorons les tendances qui façonnent l'apprentissage de demain.</p>
+                    
+                    <h3>Apprentissage adaptatif</h3>
+                    <p>Les systèmes d'apprentissage adaptatif utilisent l'IA pour personnaliser le parcours d'apprentissage de chaque étudiant. Ils s'ajustent en temps réel selon les performances et les préférences individuelles.</p>
+                    
+                    <h3>Feedback instantané et personnalisé</h3>
+                    <p>L'IA peut fournir un feedback détaillé en quelques secondes, identifiant non seulement les erreurs mais aussi les raisons derrière ces erreurs et suggérant des améliorations spécifiques.</p>
+                    
+                    <h3>Analyse prédictive</h3>
+                    <p>En analysant les données d'apprentissage, l'IA peut prédire quels étudiants risquent de rencontrer des difficultés et intervenir de manière proactive pour les aider avant qu'il ne soit trop tard.</p>
+                    
+                    <h3>Personnalisation du contenu</h3>
+                    <p>Chaque apprenant reçoit un contenu adapté à son niveau, ses intérêts et son style d'apprentissage. Cette personnalisation améliore significativement l'engagement et les résultats.</p>
+                    
+                    <h3>Accessibilité améliorée</h3>
+                    <p>L'IA rend l'éducation plus accessible en fournissant des traductions automatiques, des sous-titres, et des adaptations pour différents besoins d'apprentissage.</p>
+                `
+            },
+            4: {
+                image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1400&h=900&fit=crop&q=80',
+                category: 'Astuces',
+                title: 'Organisez vos notes comme un pro',
+                date: '15 mars 2025',
+                content: `
+                    <p>Une bonne organisation est la clé d'un système de notes efficace. Découvrez comment structurer vos notes pour les retrouver instantanément.</p>
+                    
+                    <h3>Systèmes de classement</h3>
+                    <p>Créez une hiérarchie claire : par matière, par date, par projet, ou par thème. Choisissez la méthode qui correspond le mieux à votre façon de travailler et restez cohérent.</p>
+                    
+                    <h3>Tags et métadonnées</h3>
+                    <p>Utilisez des tags pour catégoriser vos notes. Ajoutez des métadonnées comme la date, le sujet, le niveau d'importance. Ces informations facilitent la recherche ultérieure.</p>
+                    
+                    <h3>Index et tableaux de bord</h3>
+                    <p>Créez un index central qui répertorie toutes vos notes. Un tableau de bord vous donne une vue d'ensemble de vos projets et vous aide à prioriser vos révisions.</p>
+                    
+                    <h3>Organisation par projets</h3>
+                    <p>Groupez vos notes par projet ou par objectif. Cette approche vous permet de voir l'ensemble du contexte et de comprendre comment les différentes informations s'articulent.</p>
+                    
+                    <h3>Maintenir l'organisation</h3>
+                    <p>Prenez quelques minutes chaque semaine pour réorganiser et archiver vos notes. Un système bien entretenu reste utile sur le long terme et vous fait gagner un temps précieux.</p>
+                `
+            },
+            5: {
+                image: 'https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1400&h=900&fit=crop&q=80',
+                category: 'Technologie',
+                title: 'Les tendances tech qui changent l\'apprentissage',
+                date: '10 mars 2025',
+                content: `
+                    <p>Les technologies émergentes transforment radicalement notre façon d'apprendre. Découvrez les innovations qui façonnent l'éducation moderne.</p>
+                    
+                    <h3>Réalité augmentée et virtuelle</h3>
+                    <p>La RA et la VR créent des expériences d'apprentissage immersives. Imaginez étudier l'anatomie en 3D ou visiter des sites historiques depuis votre salon. Ces technologies rendent l'apprentissage plus engageant et mémorable.</p>
+                    
+                    <h3>Blockchain pour la certification</h3>
+                    <p>La blockchain permet de créer des certificats vérifiables et infalsifiables. Vos accomplissements académiques sont sécurisés et facilement partageables, ouvrant de nouvelles possibilités pour la reconnaissance des compétences.</p>
+                    
+                    <h3>Apprentissage automatique</h3>
+                    <p>L'apprentissage automatique adapte le contenu éducatif en temps réel. Les systèmes analysent vos interactions, comprennent vos préférences et optimisent votre parcours d'apprentissage automatiquement.</p>
+                    
+                    <h3>Collaboration en temps réel</h3>
+                    <p>Les outils de collaboration permettent à plusieurs personnes de travailler ensemble sur les mêmes notes, partageant des idées et construisant collectivement la connaissance.</p>
+                    
+                    <h3>L'avenir est maintenant</h3>
+                    <p>Ces technologies ne sont plus de la science-fiction. Elles sont déjà disponibles et transforment l'éducation. L'adaptation à ces outils devient essentielle pour réussir dans le monde moderne.</p>
+                `
+            },
+            6: {
+                image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1400&h=900&fit=crop&q=80',
+                category: 'Méthodes',
+                title: 'Optimisez votre workflow de prise de notes',
+                date: '3 mars 2025',
+                content: `
+                    <p>Un workflow optimisé peut transformer votre productivité. Découvrez comment créer un système de prise de notes qui fonctionne pour vous.</p>
+                    
+                    <h3>Raccourcis clavier et automatisation</h3>
+                    <p>Apprenez les raccourcis clavier de votre application de notes préférée. Créez des templates réutilisables pour différents types de notes. L'automatisation vous fait gagner un temps précieux.</p>
+                    
+                    <h3>Templates personnalisés</h3>
+                    <p>Créez des templates pour vos cours, réunions, ou projets. Un bon template vous guide dans la capture des informations importantes et assure la cohérence de vos notes.</p>
+                    
+                    <h3>Automatisation avec l'IA</h3>
+                    <p>Utilisez l'IA pour automatiser les tâches répétitives : résumé automatique, génération de questions de révision, détection des concepts clés. NotAIL fait tout cela pour vous.</p>
+                    
+                    <h3>Systèmes de révision</h3>
+                    <p>Intégrez la révision dans votre workflow. Planifiez des sessions de révision régulières, utilisez des techniques de répétition espacée, et transformez vos notes en matériel d'étude efficace.</p>
+                    
+                    <h3>Workflow complet</h3>
+                    <p>Un bon workflow couvre tout : de la capture initiale à l'archivage final. Chaque étape doit être optimisée pour maximiser votre efficacité et votre compréhension.</p>
+                `
+            }
+        };
+
+        // Modal functionality
+        const modal = document.getElementById('articleModal');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalClose = document.getElementById('modalClose');
+        const modalHeader = document.getElementById('modalHeader');
+        const modalCategory = document.getElementById('modalCategory');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDate = document.getElementById('modalDate');
+        const modalText = document.getElementById('modalText');
+        const readMoreLinks = document.querySelectorAll('.article-card-read-more');
+
+        function openModal(articleId) {
+            const article = articlesData[articleId];
+            if (!article) {
+                console.error('Article non trouvé pour l\'ID:', articleId);
+                return;
+            }
+
+            // Vérifier que tous les éléments du modal existent
+            if (!modalHeader || !modalCategory || !modalTitle || !modalDate || !modalText) {
+                console.error('Certains éléments du modal sont manquants');
+                return;
+            }
+
+            modalHeader.style.backgroundImage = `url('${article.image}')`;
+            modalCategory.textContent = article.category;
+            modalTitle.textContent = article.title;
+            modalDate.textContent = article.date;
+            modalText.innerHTML = article.content;
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Scroll to top of modal
+            setTimeout(() => {
+                if (modal) {
+                    modal.scrollTop = 0;
+                }
+            }, 100);
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        readMoreLinks.forEach(link => {
+            // Vérifier que l'attribut data-article existe
+            const articleId = link.getAttribute('data-article');
+            if (!articleId) {
+                console.error('Lien sans attribut data-article:', link);
+                return;
+            }
+            
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const articleId = link.getAttribute('data-article');
+                console.log('Ouverture de l\'article:', articleId); // Pour le débogage
+                openModal(parseInt(articleId));
+            });
+        });
+
+        modalClose.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', closeModal);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+
+        // WebGL Background
+        (function() {
+            const canvas = document.getElementById('webgl-background');
+            const scene = new THREE.Scene();
+            const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setClearColor(0x000000, 0);
+
+            const vertexShader = `void main() { gl_Position = vec4(position, 1.0); }`;
+            const fragmentShader = `
+                precision highp float;
+                uniform vec2 uResolution;
+                uniform float uTime;
+                uniform vec3 uColor;
+                uniform float uPixelSize;
+                uniform float uScale;
+                uniform float uDensity;
+                
+                float Bayer2(vec2 a) { a = floor(a); return fract(a.x / 2.0 + a.y * a.y * 0.75); }
+                float Bayer4(vec2 a) { return Bayer2(0.5 * a) * 0.25 + Bayer2(a); }
+                float Bayer8(vec2 a) { return Bayer4(0.5 * a) * 0.25 + Bayer2(a); }
+                float hash11(float n) { return fract(sin(n) * 43758.5453); }
+                
+                float vnoise(vec3 p) {
+                    vec3 ip = floor(p);
+                    vec3 fp = fract(p);
+                    float n000 = hash11(dot(ip + vec3(0.0,0.0,0.0), vec3(1.0,57.0,113.0)));
+                    float n100 = hash11(dot(ip + vec3(1.0,0.0,0.0), vec3(1.0,57.0,113.0)));
+                    float n010 = hash11(dot(ip + vec3(0.0,1.0,0.0), vec3(1.0,57.0,113.0)));
+                    float n110 = hash11(dot(ip + vec3(1.0,1.0,0.0), vec3(1.0,57.0,113.0)));
+                    float n001 = hash11(dot(ip + vec3(0.0,0.0,1.0), vec3(1.0,57.0,113.0)));
+                    float n101 = hash11(dot(ip + vec3(1.0,0.0,1.0), vec3(1.0,57.0,113.0)));
+                    float n011 = hash11(dot(ip + vec3(0.0,1.0,1.0), vec3(1.0,57.0,113.0)));
+                    float n111 = hash11(dot(ip + vec3(1.0,1.0,1.0), vec3(1.0,57.0,113.0)));
+                    vec3 w = fp * fp * fp * (fp * (fp * 6.0 - 15.0) + 10.0);
+                    float x00 = mix(n000, n100, w.x);
+                    float x10 = mix(n010, n110, w.x);
+                    float x01 = mix(n001, n101, w.x);
+                    float x11 = mix(n011, n111, w.x);
+                    float y0 = mix(x00, x10, w.y);
+                    float y1 = mix(x01, x11, w.y);
+                    return mix(y0, y1, w.z) * 2.0 - 1.0;
+                }
+                
+                float fbm(vec2 uv, float t) {
+                    vec3 p = vec3(uv * uScale, t);
+                    float amp = 1.0, freq = 1.0, sum = 1.0;
+                    for (int i = 0; i < 5; ++i) {
+                        sum += amp * vnoise(p * freq);
+                        freq *= 1.25; amp *= 1.0;
+                    }
+                    return sum * 0.5 + 0.5;
+                }
+                
+                float maskCircle(vec2 p, float cov) {
+                    float r = sqrt(cov) * 0.25;
+                    float d = length(p - 0.5) - r;
+                    float aa = 0.5 * fwidth(d);
+                    return cov * (1.0 - smoothstep(-aa, aa, d * 2.0));
+                }
+                
+                void main() {
+                    vec2 fragCoord = gl_FragCoord.xy - uResolution * 0.5;
+                    float aspectRatio = uResolution.x / uResolution.y;
+                    vec2 pixelId = floor(fragCoord / uPixelSize);
+                    vec2 pixelUV = fract(fragCoord / uPixelSize);
+                    float cellPixelSize = 8.0 * uPixelSize;
+                    vec2 cellId = floor(fragCoord / cellPixelSize);
+                    vec2 cellCoord = cellId * cellPixelSize;
+                    vec2 uv = cellCoord / uResolution * vec2(aspectRatio, 1.0);
+                    float base = fbm(uv, uTime * 0.05);
+                    base = base * 0.5 - 0.65;
+                    float feed = base + (uDensity - 0.5) * 0.3;
+                    float bayer = Bayer8(fragCoord / uPixelSize) - 0.5;
+                    float bw = step(0.5, feed + bayer);
+                    float h = fract(sin(dot(floor(fragCoord / uPixelSize), vec2(127.1, 311.7))) * 43758.5453);
+                    float jitterScale = 1.0 + (h - 0.5) * 0.5;
+                    float coverage = bw * jitterScale;
+                    float M = maskCircle(pixelUV, coverage);
+                    vec2 norm = gl_FragCoord.xy / uResolution;
+                    float edge = min(min(norm.x, norm.y), min(1.0 - norm.x, 1.0 - norm.y));
+                    float fade = smoothstep(0.0, 0.25, edge);
+                    M *= fade;
+                    gl_FragColor = vec4(uColor, M);
+                }
+            `;
+
+            const material = new THREE.ShaderMaterial({
+                vertexShader, fragmentShader,
+                uniforms: {
+                    uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                    uTime: { value: 0 },
+                    uColor: { value: new THREE.Vector3(0.69, 0.62, 0.94) },
+                    uPixelSize: { value: 6.0 },
+                    uScale: { value: 3.0 },
+                    uDensity: { value: 1.2 }
+                },
+                transparent: true, depthTest: false
+            });
+
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+            scene.add(mesh);
+
+            function resize() {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                material.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                material.uniforms.uTime.value += 0.016;
+                renderer.render(scene, camera);
+            }
+            animate();
+        })();
+
+        // Animation de transition entre les pages
+        function initPageTransition() {
+            try {
+                // Créer l'élément de transition
+                const transitionElement = document.createElement('div');
+                transitionElement.classList.add('page-transition');
+                document.body.appendChild(transitionElement);
+
+                // Intercepter les clics sur les liens
+                const links = document.querySelectorAll('a[href]');
+                links.forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        const href = this.getAttribute('href');
+                        
+                        // Vérifier si c'est un lien interne
+                        if (href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto') && !href.startsWith('javascript:')) {
+                            e.preventDefault();
+                            
+                            // Activer l'animation de transition
+                            transitionElement.classList.add('active');
+                            
+                            // Naviguer vers la nouvelle page après l'animation
+                            setTimeout(() => {
+                                window.location.href = href;
+                            }, 500);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Erreur dans initPageTransition:', error);
+            }
+        }
+
+        // Initialiser la transition au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            initPageTransition();
+        });
+    </script>
+</body>
+</html>

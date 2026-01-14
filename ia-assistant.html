@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA Assistant - NotAIL</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Animation de transition entre les pages */
+        .page-transition {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+        }
+
+        .page-transition.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000000;
+            color: white;
+            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Canvas WebGL en arrière-plan */
+        #webgl-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 1;
+        }
+
+        /* Navigation - Cachée pour format plein écran */
+        nav {
+            display: none;
+        }
+
+        /* Interface Chat GPT - Format plein écran */
+        .chat-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            max-width: 100%;
+            margin: 0;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .chat-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            flex: 1;
+            text-align: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 0;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .message {
+            display: flex;
+            gap: 15px;
+            padding: 15px 20px;
+            max-width: 100%;
+            margin: 0;
+            width: 100%;
+            animation: fadeIn 0.3s ease-in;
+            box-sizing: border-box;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: transparent;
+        }
+
+        .message.assistant {
+            background: transparent;
+        }
+
+        .message-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .message.user .message-avatar {
+            background: rgba(177, 158, 239, 0.3);
+            color: #B19EEF;
+        }
+
+        .message.assistant .message-avatar {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .message-content {
+            flex: 1;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .message-content pre {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .message-content code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .message-content p {
+            margin-bottom: 12px;
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 5px 0;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        .chat-input-container {
+            position: sticky;
+            bottom: 0;
+            padding: 15px 20px;
+            background: transparent;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+
+        .chat-input-wrapper {
+            max-width: 100%;
+            margin: 0;
+            position: relative;
+        }
+
+        .chat-input {
+            width: 100%;
+            min-height: 52px;
+            max-height: 200px;
+            padding: 14px 50px 14px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 26px;
+            color: white;
+            font-size: 15px;
+            font-family: inherit;
+            resize: none;
+            overflow-y: auto;
+            transition: all 0.2s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: rgba(177, 158, 239, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .chat-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .chat-input::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-input::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-input::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .send-button {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(177, 158, 239, 0.3);
+            border: none;
+            color: #B19EEF;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .send-button:hover:not(:disabled) {
+            background: rgba(177, 158, 239, 0.5);
+            transform: scale(1.05);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .send-button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .empty-state p {
+            font-size: 16px;
+            max-width: 600px;
+        }
+
+        /* Responsive - Déjà optimisé pour format téléphone */
+        @media (max-width: 768px) {
+            .chat-header {
+                padding: 12px 15px;
+                gap: 12px;
+            }
+
+            .back-button {
+                width: 32px;
+                height: 32px;
+            }
+
+            .back-button svg {
+                width: 18px;
+                height: 18px;
+            }
+
+            .chat-header h1 {
+                font-size: 16px;
+            }
+
+            .message {
+                padding: 12px 15px;
+                gap: 12px;
+            }
+
+            .message-avatar {
+                width: 24px;
+                height: 24px;
+                font-size: 11px;
+            }
+
+            .message-content {
+                font-size: 13px;
+            }
+
+            .chat-input-container {
+                padding: 12px 15px;
+            }
+
+            .chat-input {
+                padding: 10px 40px 10px 12px;
+                font-size: 14px;
+                min-height: 44px;
+            }
+
+            .send-button {
+                width: 30px;
+                height: 30px;
+                right: 6px;
+                bottom: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas WebGL Background -->
+    <canvas id="webgl-background"></canvas>
+
+    <!-- Navigation -->
+    <nav id="navbar">
+        <ul class="nav-links">
+            <li><a href="notail.html">Accueil</a></li>
+            <li><a href="decouvrir.html">Découvrir</a></li>
+            <li><a href="ia-assistant.html">IA Assistant</a></li>
+            <li><a href="blog.html">Blog</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- Interface Chat -->
+        <div class="chat-container">
+        <div class="chat-header">
+            <a href="notail.html" class="back-button" title="Retour">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="empty-state">
+                <h2>Comment puis-je vous aider aujourd'hui ?</h2>
+                <p>Posez-moi une question ou demandez-moi de créer une note interactive, un schéma, ou toute autre assistance.</p>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                        <textarea 
+                    id="chatInput" 
+                    class="chat-input" 
+                    placeholder="Écrivez votre message..."
+                    rows="1"
+                        ></textarea>
+                <button id="sendButton" class="send-button" title="Envoyer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pied de page -->
+    <footer style="position: fixed; bottom: 20px; width: 100%; text-align: center; z-index: 1; padding: 20px; box-sizing: border-box;">
+        <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50px; padding: 10px 20px; display: inline-block;">
+
+        </div>
+    </footer>
+
+    <script>
+        // Navbar cachée pour format plein écran
+
+        // WebGL Background avec Three.js
+        (function() {
+            const canvas = document.getElementById('webgl-background');
+            const scene = new THREE.Scene();
+            const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            
+            const renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                alpha: true,
+                antialias: true
+            });
+            renderer.setClearColor(0x000000, 0);
+
+            const vertexShader = `
+                void main() {
+                    gl_Position = vec4(position, 1.0);
+                }
+            `;
+
+            const fragmentShader = `
+                precision highp float;
+                
+                uniform vec2 uResolution;
+                uniform float uTime;
+                uniform vec3 uColor;
+                uniform float uPixelSize;
+                uniform float uScale;
+                uniform float uDensity;
+                
+                float Bayer2(vec2 a) {
+                    a = floor(a);
+                    return fract(a.x / 2.0 + a.y * a.y * 0.75);
+                }
+                
+                float Bayer4(vec2 a) {
+                    return Bayer2(0.5 * a) * 0.25 + Bayer2(a);
+                }
+                
+                float Bayer8(vec2 a) {
+                    return Bayer4(0.5 * a) * 0.25 + Bayer2(a);
+                }
+                
+                float hash11(float n) {
+                    return fract(sin(n) * 43758.5453);
+                }
+                
+                float vnoise(vec3 p) {
+                    vec3 ip = floor(p);
+                    vec3 fp = fract(p);
+                    float n000 = hash11(dot(ip + vec3(0.0,0.0,0.0), vec3(1.0,57.0,113.0)));
+                    float n100 = hash11(dot(ip + vec3(1.0,0.0,0.0), vec3(1.0,57.0,113.0)));
+                    float n010 = hash11(dot(ip + vec3(0.0,1.0,0.0), vec3(1.0,57.0,113.0)));
+                    float n110 = hash11(dot(ip + vec3(1.0,1.0,0.0), vec3(1.0,57.0,113.0)));
+                    float n001 = hash11(dot(ip + vec3(0.0,0.0,1.0), vec3(1.0,57.0,113.0)));
+                    float n101 = hash11(dot(ip + vec3(1.0,0.0,1.0), vec3(1.0,57.0,113.0)));
+                    float n011 = hash11(dot(ip + vec3(0.0,1.0,1.0), vec3(1.0,57.0,113.0)));
+                    float n111 = hash11(dot(ip + vec3(1.0,1.0,1.0), vec3(1.0,57.0,113.0)));
+                    vec3 w = fp * fp * fp * (fp * (fp * 6.0 - 15.0) + 10.0);
+                    float x00 = mix(n000, n100, w.x);
+                    float x10 = mix(n010, n110, w.x);
+                    float x01 = mix(n001, n101, w.x);
+                    float x11 = mix(n011, n111, w.x);
+                    float y0 = mix(x00, x10, w.y);
+                    float y1 = mix(x01, x11, w.y);
+                    return mix(y0, y1, w.z) * 2.0 - 1.0;
+                }
+                
+                float fbm(vec2 uv, float t) {
+                    vec3 p = vec3(uv * uScale, t);
+                    float amp = 1.0;
+                    float freq = 1.0;
+                    float sum = 1.0;
+                    for (int i = 0; i < 5; ++i) {
+                        sum += amp * vnoise(p * freq);
+                        freq *= 1.25;
+                        amp *= 1.0;
+                    }
+                    return sum * 0.5 + 0.5;
+                }
+                
+                float maskCircle(vec2 p, float cov) {
+                    float r = sqrt(cov) * 0.25;
+                    float d = length(p - 0.5) - r;
+                    float aa = 0.5 * fwidth(d);
+                    return cov * (1.0 - smoothstep(-aa, aa, d * 2.0));
+                }
+                
+                void main() {
+                    vec2 fragCoord = gl_FragCoord.xy - uResolution * 0.5;
+                    float aspectRatio = uResolution.x / uResolution.y;
+                    
+                    vec2 pixelId = floor(fragCoord / uPixelSize);
+                    vec2 pixelUV = fract(fragCoord / uPixelSize);
+                    
+                    float cellPixelSize = 8.0 * uPixelSize;
+                    vec2 cellId = floor(fragCoord / cellPixelSize);
+                    vec2 cellCoord = cellId * cellPixelSize;
+                    vec2 uv = cellCoord / uResolution * vec2(aspectRatio, 1.0);
+                    
+                    float base = fbm(uv, uTime * 0.05);
+                    base = base * 0.5 - 0.65;
+                    
+                    float feed = base + (uDensity - 0.5) * 0.3;
+                    
+                    float bayer = Bayer8(fragCoord / uPixelSize) - 0.5;
+                    float bw = step(0.5, feed + bayer);
+                    
+                    float h = fract(sin(dot(floor(fragCoord / uPixelSize), vec2(127.1, 311.7))) * 43758.5453);
+                    float jitterScale = 1.0 + (h - 0.5) * 0.5;
+                    float coverage = bw * jitterScale;
+                    
+                    float M = maskCircle(pixelUV, coverage);
+                    
+                    vec2 norm = gl_FragCoord.xy / uResolution;
+                    float edge = min(min(norm.x, norm.y), min(1.0 - norm.x, 1.0 - norm.y));
+                    float fade = smoothstep(0.0, 0.25, edge);
+                    M *= fade;
+                    
+                    gl_FragColor = vec4(uColor, M);
+                }
+            `;
+
+            const material = new THREE.ShaderMaterial({
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                uniforms: {
+                    uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                    uTime: { value: 0 },
+                    uColor: { value: new THREE.Vector3(0.69, 0.62, 0.94) },
+                    uPixelSize: { value: 6.0 },
+                    uScale: { value: 3.0 },
+                    uDensity: { value: 1.2 }
+                },
+                transparent: true,
+                depthTest: false
+            });
+
+            const geometry = new THREE.PlaneGeometry(2, 2);
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+
+            function resize() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                renderer.setSize(width, height);
+                material.uniforms.uResolution.value.set(width, height);
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                material.uniforms.uTime.value += 0.016;
+                renderer.render(scene, camera);
+            }
+            animate();
+        })();
+
+        // Chat functionality
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+                    const chatMessages = document.getElementById('chatMessages');
+                    
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+
+        // Send message function
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Remove empty state
+            const emptyState = chatMessages.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            // Add user message
+            addMessage('user', message);
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+
+            // Disable input
+            chatInput.disabled = true;
+            sendButton.disabled = true;
+
+            // Add typing indicator
+            const typingId = addTypingIndicator();
+
+            try {
+                // Simulate API call (replace with your actual API)
+                const response = await simulateAIResponse(message);
+                
+                // Remove typing indicator
+                removeTypingIndicator(typingId);
+                
+                // Add assistant response
+                addMessage('assistant', response);
+                } catch (error) {
+                removeTypingIndicator(typingId);
+                addMessage('assistant', 'Désolé, une erreur est survenue. Veuillez réessayer.');
+            } finally {
+                chatInput.disabled = false;
+                sendButton.disabled = false;
+                chatInput.focus();
+            }
+        }
+
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? 'U' : 'AI';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            // Format content (support markdown-like formatting)
+            contentDiv.innerHTML = formatMessage(content);
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+
+            // Scroll to bottom
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                }
+
+        function formatMessage(text) {
+            // Simple formatting: code blocks, bold, etc.
+            let formatted = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+            
+            // Code blocks
+            formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+            
+            // Wrap in paragraphs
+            const paragraphs = formatted.split('<br><br>');
+            return paragraphs.map(p => `<p>${p}</p>`).join('');
+        }
+
+        function addTypingIndicator() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            messageDiv.id = 'typing-indicator';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = 'AI';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+            return 'typing-indicator';
+        }
+
+        function removeTypingIndicator(id) {
+            const indicator = document.getElementById(id);
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        async function simulateAIResponse(userMessage) {
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+            // Simple responses (replace with actual API call)
+            const responses = [
+                `Je comprends votre demande : "${userMessage}". Comment puis-je vous aider davantage ?`,
+                `Voici une réponse à votre question. Si vous avez besoin de plus de détails, n'hésitez pas à demander.`,
+                `Excellente question ! Voici ce que je peux vous dire à ce sujet.`,
+                `Je peux vous aider avec cela. Souhaitez-vous que je crée une note interactive ou un schéma ?`
+            ];
+
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                sendMessage();
+                }
+        });
+
+        // Animation de transition entre les pages
+        function initPageTransition() {
+            try {
+            const transitionElement = document.createElement('div');
+            transitionElement.classList.add('page-transition');
+            document.body.appendChild(transitionElement);
+
+                const links = document.querySelectorAll('a[href]');
+                links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    
+                        if (href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto') && !href.startsWith('javascript:')) {
+                        e.preventDefault();
+                        transitionElement.classList.add('active');
+                        setTimeout(() => {
+                            window.location.href = href;
+                        }, 500);
+                    }
+                });
+            });
+            } catch (error) {
+                console.error('Erreur dans initPageTransition:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initPageTransition();
+            chatInput.focus();
+        });
+    </script>
+</body>
+</html>
